@@ -1,0 +1,13 @@
+{
+  "whatsapp": {
+    "enabled": true,
+    "openwa_url": "http://localhost:2785",
+    "api_key": "",
+    "session_id": "phoebe-finance-bot",
+    "phone": "6285925155500",
+    "budget_alerts": true,
+    "bot_enabled": true,
+    "digest_enabled": true,
+    "digest_schedule": "weekly"
+  }
+}

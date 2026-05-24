@@ -1,0 +1,33 @@
+## Render deployment — https://render.com
+## One file deploys the backend API + PostgreSQL database.
+## Frontend is deployed separately on Vercel.
+
+services:
+  - type: web
+    name: fintrack-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fintrack-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true        # Render auto-generates a secure random value
+      - key: ADMIN_PASSWORD
+        sync: false                # Set this manually in the Render dashboard
+      - key: FRONTEND_URL
+        sync: false                # Set to your Vercel deployment URL
+      - key: GROQ_API_KEY
+        sync: false                # Free key from https://console.groq.com
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+
+databases:
+  - name: fintrack-db
+    databaseName: fintrack
+    user: fintrack_user
+    plan: free                     # Render free PostgreSQL (90-day trial, then $7/mo)
