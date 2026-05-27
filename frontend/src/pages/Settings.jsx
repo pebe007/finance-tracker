@@ -15,8 +15,9 @@ import {
   getAppSettings,
   getCategories,
   getTransactions,
+  registerWebhook,
   sendDigest,
-  testWhatsApp,
+  testTelegram,
   updateAppSettings,
 } from "../api";
 
@@ -92,17 +93,19 @@ function CategoryRow({ cat, onDelete }) {
   );
 }
 
-/* ─── WhatsApp config panel ─── */
-function WhatsAppPanel() {
-  const [cfg, setCfg]         = useState(null);
-  const [saving, setSaving]   = useState(false);
-  const [testing, setTesting] = useState(false);
+/* ─── Telegram config panel ─── */
+function TelegramPanel() {
+  const [cfg, setCfg]             = useState(null);
+  const [saving, setSaving]       = useState(false);
+  const [testing, setTesting]     = useState(false);
   const [digesting, setDigesting] = useState(false);
-  const [status, setStatus]   = useState(null); // {ok, msg}
+  const [registering, setRegistering] = useState(false);
+  const [renderUrl, setRenderUrl] = useState("https://fintrack-api.onrender.com");
+  const [status, setStatus]       = useState(null); // {ok, msg}
 
   useEffect(() => {
     getAppSettings()
-      .then((s) => setCfg(s.whatsapp))
+      .then((s) => setCfg(s.telegram))
       .catch(() => setStatus({ ok: false, msg: "Could not load settings." }));
   }, []);
 
@@ -112,7 +115,7 @@ function WhatsAppPanel() {
     setSaving(true);
     setStatus(null);
     try {
-      await updateAppSettings({ whatsapp: cfg });
+      await updateAppSettings({ telegram: cfg });
       setStatus({ ok: true, msg: "Settings saved." });
     } catch {
       setStatus({ ok: false, msg: "Save failed." });
@@ -125,8 +128,8 @@ function WhatsAppPanel() {
     setTesting(true);
     setStatus(null);
     try {
-      await testWhatsApp();
-      setStatus({ ok: true, msg: "Test message sent successfully." });
+      await testTelegram();
+      setStatus({ ok: true, msg: "Test message sent — check Telegram." });
     } catch (err) {
       setStatus({ ok: false, msg: err.response?.data?.detail ?? "Test failed." });
     } finally {
@@ -139,7 +142,7 @@ function WhatsAppPanel() {
     setStatus(null);
     try {
       await sendDigest();
-      setStatus({ ok: true, msg: "Digest queued — check WhatsApp." });
+      setStatus({ ok: true, msg: "Digest queued — check Telegram." });
     } catch (err) {
       setStatus({ ok: false, msg: err.response?.data?.detail ?? "Digest failed." });
     } finally {
@@ -147,20 +150,34 @@ function WhatsAppPanel() {
     }
   };
 
+  const handleRegisterWebhook = async () => {
+    setRegistering(true);
+    setStatus(null);
+    try {
+      const res = await registerWebhook(renderUrl);
+      setStatus({ ok: true, msg: `Webhook registered: ${res.webhook_url}` });
+    } catch (err) {
+      setStatus({ ok: false, msg: err.response?.data?.detail ?? "Registration failed." });
+    } finally {
+      setRegistering(false);
+    }
+  };
+
   if (!cfg) return <p style={{ color: "#4b5563", fontSize: 13 }}>Loading…</p>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
       {/* Master toggle */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-white text-sm font-semibold">Enable WhatsApp Integration</p>
-          <p style={{ fontSize: 12, color: "#4b5563" }}>Requires a running OpenWA instance</p>
+          <p className="text-white text-sm font-semibold">Enable Telegram Integration</p>
+          <p style={{ fontSize: 12, color: "#4b5563" }}>No extra hosting needed — uses Telegram Bot API directly</p>
         </div>
         <Toggle checked={cfg.enabled} onChange={(v) => set("enabled", v)} />
       </div>
 
-      {/* Connection config */}
+      {/* Bot config */}
       <div
         style={{
           display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12,
@@ -168,42 +185,44 @@ function WhatsAppPanel() {
           pointerEvents: cfg.enabled ? "auto" : "none",
         }}
       >
-        <div>
-          <label className="field-label">OpenWA URL</label>
-          <input
-            className="field"
-            value={cfg.openwa_url}
-            onChange={(e) => set("openwa_url", e.target.value)}
-            placeholder="http://localhost:2785"
-          />
-        </div>
-        <div>
-          <label className="field-label">API Key</label>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label className="field-label">Bot Token</label>
           <input
             className="field"
             type="password"
-            value={cfg.api_key}
-            onChange={(e) => set("api_key", e.target.value)}
-            placeholder="Your OpenWA API key"
+            value={cfg.bot_token}
+            onChange={(e) => set("bot_token", e.target.value)}
+            placeholder="1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ (from @BotFather)"
           />
         </div>
         <div>
-          <label className="field-label">Session ID</label>
+          <label className="field-label">Your Chat ID</label>
           <input
             className="field"
-            value={cfg.session_id}
-            onChange={(e) => set("session_id", e.target.value)}
-            placeholder="e.g. my-bot"
+            value={cfg.chat_id}
+            onChange={(e) => set("chat_id", e.target.value)}
+            placeholder="123456789 (get via getUpdates)"
           />
         </div>
         <div>
-          <label className="field-label">Recipient Phone</label>
-          <input
-            className="field"
-            value={cfg.phone}
-            onChange={(e) => set("phone", e.target.value)}
-            placeholder="628123456789 (digits only)"
-          />
+          <label className="field-label">Digest Schedule</label>
+          <div className="flex rounded overflow-hidden" style={{ border: "1px solid #374151" }}>
+            {[["daily", "Daily"], ["weekly", "Weekly"]].map(([val, lbl]) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => set("digest_schedule", val)}
+                className="text-sm px-4 py-1.5 transition-all"
+                style={
+                  cfg.digest_schedule === val
+                    ? { background: "#4f46e5", color: "#fff", flex: 1 }
+                    : { background: "#1f2937", color: "#6b7280", flex: 1 }
+                }
+              >
+                {lbl}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -217,11 +236,10 @@ function WhatsAppPanel() {
         }}
       >
         <p className="section-title">Features</p>
-
         {[
-          ["budget_alerts", "Budget over-limit alerts",  "Send a WA message when a category exceeds its budget (triggered on transaction save)"],
-          ["bot_enabled",   "Transaction bot",            "Log transactions by sending a WA message: 'coffee 45000' or 'salary 5000000 income'"],
-          ["digest_enabled","Scheduled digest",           "Periodic summary of income, expenses, and net (configure your WA bot's webhook to call /api/app-settings/digest)"],
+          ["budget_alerts", "Budget over-limit alerts",  "Sends a Telegram message when a category hits ≥80% of its budget"],
+          ["bot_enabled",   "Transaction bot",            "Log transactions by messaging the bot: 'coffee 45000' or 'salary 5jt income'"],
+          ["digest_enabled","Scheduled digest",           "Monthly income/expense summary — trigger manually or via a scheduled task"],
         ].map(([key, label, desc]) => (
           <div key={key} className="flex items-start justify-between gap-4">
             <div>
@@ -231,29 +249,6 @@ function WhatsAppPanel() {
             <Toggle checked={cfg[key]} onChange={(v) => set(key, v)} />
           </div>
         ))}
-
-        {cfg.digest_enabled && (
-          <div style={{ marginTop: 4 }}>
-            <label className="field-label">Digest schedule</label>
-            <div className="flex rounded overflow-hidden" style={{ border: "1px solid #374151", width: "fit-content" }}>
-              {[["daily", "Daily"], ["weekly", "Weekly"]].map(([val, label]) => (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => set("digest_schedule", val)}
-                  className="text-sm px-4 py-1.5 transition-all"
-                  style={
-                    cfg.digest_schedule === val
-                      ? { background: "#4f46e5", color: "#fff" }
-                      : { background: "#1f2937", color: "#6b7280" }
-                  }
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Status */}
@@ -271,42 +266,52 @@ function WhatsAppPanel() {
       )}
 
       {/* Actions */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <button onClick={handleSave} disabled={saving} className="btn btn-primary">
           {saving ? "Saving…" : "Save Settings"}
         </button>
-        <button
-          onClick={handleTest}
-          disabled={testing || !cfg.enabled}
-          className="btn btn-ghost"
-        >
+        <button onClick={handleTest} disabled={testing || !cfg.enabled} className="btn btn-ghost">
           <Send size={13} />
           {testing ? "Sending…" : "Send Test"}
         </button>
-        <button
-          onClick={handleDigest}
-          disabled={digesting || !cfg.enabled}
-          className="btn btn-ghost"
-        >
+        <button onClick={handleDigest} disabled={digesting || !cfg.enabled} className="btn btn-ghost">
           <MessageSquare size={13} />
-          {digesting ? "Sending…" : "Send Digest Now"}
+          {digesting ? "Sending…" : "Send Digest"}
         </button>
       </div>
 
-      {/* Webhook setup info */}
+      {/* Webhook registration */}
       <div
-        className="rounded text-xs"
-        style={{ background: "#1e2040", border: "1px solid #2d3158", padding: "10px 12px" }}
+        className="rounded"
+        style={{ background: "#1e2040", border: "1px solid #2d3158", padding: "12px" }}
       >
-        <p style={{ color: "#a5b4fc", fontWeight: 600, marginBottom: 4 }}>WA Bot Webhook Setup</p>
-        <p style={{ color: "#6b7280", lineHeight: 1.6 }}>
-          In your OpenWA dashboard, set the webhook URL for your session to:
-          <br />
-          <span className="num" style={{ color: "#93c5fd", background: "#0f172a", padding: "1px 6px", borderRadius: 4, display: "inline-block", marginTop: 4 }}>
-            http://YOUR_SERVER/api/wa/webhook
-          </span>
-          <br />
-          Then message the bot: <span style={{ color: "#c7d2fe" }}>coffee 45000</span> or{" "}
+        <p style={{ color: "#a5b4fc", fontWeight: 600, fontSize: 12, marginBottom: 8 }}>
+          Webhook Registration
+        </p>
+        <p style={{ color: "#6b7280", fontSize: 11, marginBottom: 10, lineHeight: 1.6 }}>
+          Register your Render backend URL with Telegram so the bot receives messages.
+          Run once after deploying or changing the bot token.
+        </p>
+        <div className="flex gap-2 items-center">
+          <input
+            className="field"
+            style={{ flex: 1, fontSize: 12 }}
+            value={renderUrl}
+            onChange={(e) => setRenderUrl(e.target.value)}
+            placeholder="https://fintrack-api.onrender.com"
+          />
+          <button
+            onClick={handleRegisterWebhook}
+            disabled={registering || !cfg.enabled}
+            className="btn btn-ghost"
+            style={{ whiteSpace: "nowrap" }}
+          >
+            {registering ? "Registering…" : "Register Webhook"}
+          </button>
+        </div>
+        <p style={{ color: "#4b5563", fontSize: 11, marginTop: 8 }}>
+          Then message <span style={{ color: "#c7d2fe" }}>@YourBotName</span> on Telegram:{" "}
+          <span style={{ color: "#c7d2fe" }}>coffee 45000</span> or{" "}
           <span style={{ color: "#c7d2fe" }}>salary 5000000 income</span>
         </p>
       </div>
@@ -382,9 +387,9 @@ export default function Settings() {
         <p style={{ fontSize: 12, color: "#4b5563" }}>Manage categories, integrations, and data</p>
       </div>
 
-      {/* ── WhatsApp ── */}
-      <Section title="WhatsApp Integration (OpenWA)" icon={MessageSquare}>
-        <WhatsAppPanel />
+      {/* ── Telegram ── */}
+      <Section title="Telegram Integration" icon={MessageSquare}>
+        <TelegramPanel />
       </Section>
 
       {/* ── Export ── */}

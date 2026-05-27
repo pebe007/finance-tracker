@@ -38,12 +38,14 @@ export const getSummary = (month, year) =>
 export const parseTransaction = (text) =>
   client.post("/transactions/parse", { text }).then((r) => r.data);
 
-// App Settings (WhatsApp / WAHA)
+// App Settings (Telegram)
 export const getAppSettings = () =>
   client.get("/app-settings/").then((r) => r.data);
 export const updateAppSettings = (data) =>
   client.put("/app-settings/", data).then((r) => r.data);
-export const testWhatsApp = () =>
-  client.post("/app-settings/test-wa").then((r) => r.data);
+export const testTelegram = () =>
+  client.post("/app-settings/test-telegram").then((r) => r.data);
+export const registerWebhook = (renderUrl) =>
+  client.post("/app-settings/register-webhook", null, { params: { render_url: renderUrl } }).then((r) => r.data);
 export const sendDigest = () =>
   client.post("/app-settings/digest").then((r) => r.data);

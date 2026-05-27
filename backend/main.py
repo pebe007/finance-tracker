@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from database import Base, SessionLocal, engine
 from models import Budget, Category, Transaction  # noqa: F401 — ensures models are registered
-from routers import app_settings, auth, budgets, categories, summary, transactions, wa
+from routers import app_settings, auth, budgets, categories, summary, telegram, transactions
 from services.seed import seed_categories
 
 # Create all tables on startup (Alembic handles migrations in prod)
@@ -28,7 +28,7 @@ app.include_router(categories.router)
 app.include_router(budgets.router)
 app.include_router(summary.router)
 app.include_router(app_settings.router)
-app.include_router(wa.router)     # /wa/webhook — no auth, called by OpenWA
+app.include_router(telegram.router)   # /telegram/webhook — no auth, called by Telegram
 
 
 @app.on_event("startup")

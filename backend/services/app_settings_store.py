@@ -1,4 +1,4 @@
-"""Persistent app settings (WhatsApp config, etc.) stored in a JSON sidecar file."""
+"""Persistent app settings (Telegram config, etc.) stored in a JSON sidecar file."""
 from __future__ import annotations
 
 import json
@@ -13,20 +13,18 @@ logger = logging.getLogger(__name__)
 _SETTINGS_FILE = Path(__file__).parent.parent / "app_settings.json"
 
 
-class WhatsAppConfig(BaseModel):
+class TelegramConfig(BaseModel):
     enabled: bool = False
-    openwa_url: str = "http://localhost:2785"
-    api_key: str = ""
-    session_id: str = ""
-    phone: str = ""           # recipient — digits only, e.g. "628123456789"
+    bot_token: str = ""
+    chat_id: str = ""          # numeric chat ID — get via /start then getUpdates
     budget_alerts: bool = True
-    bot_enabled: bool = True  # allow logging transactions via WA bot
+    bot_enabled: bool = True   # allow logging transactions via Telegram bot
     digest_enabled: bool = False
     digest_schedule: str = "daily"  # "daily" | "weekly"
 
 
 class AppSettings(BaseModel):
-    whatsapp: WhatsAppConfig = WhatsAppConfig()
+    telegram: TelegramConfig = TelegramConfig()
 
 
 def load_settings() -> AppSettings:

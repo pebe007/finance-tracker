@@ -1,6 +1,6 @@
 # Deployment Guide — FinTrack
 
-Full hosting setup: Render (backend API) + Vercel (frontend) + Render PostgreSQL (database) + Groq (NLP) + WAHA + Cloudflare Tunnel (WhatsApp).
+Full hosting setup: Render (backend API) + Vercel (frontend) + Render PostgreSQL (database) + Groq (NLP) + Telegram Bot (notifications).
 
 ---
 
@@ -100,79 +100,51 @@ Once Vercel gives you a URL (e.g. `https://fintrack.vercel.app`):
 
 ---
 
-## Step 4 — WAHA + Cloudflare Tunnel (WhatsApp)
+## Step 4 — Telegram Bot (Notifications + Transaction Logging)
 
-WAHA runs locally on your machine and is exposed to the internet via a Cloudflare Tunnel — no port forwarding required.
+No extra hosting needed. Telegram connects directly to your Render backend via webhook — completely free forever.
 
-### 4a. Install Docker
+### 4a. Create a Telegram bot
 
-[docs.docker.com/get-docker](https://docs.docker.com/get-docker/) — install Docker Desktop for Windows.
+1. Open Telegram → search **@BotFather** → start a chat
+2. Send `/newbot` → follow prompts → pick a name and username (e.g. `FinTrackBot`)
+3. BotFather replies with a **bot token** like `1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ` — copy it
 
-### 4b. Run WAHA
+### 4b. Get your Chat ID
 
-```bash
-docker run -d \
-  --name waha \
-  --restart unless-stopped \
-  -p 3000:3000 \
-  -e WHATSAPP_API_KEY=your-secret-key-here \
-  devlikeapro/waha
-```
+1. Message your new bot: `/start`
+2. Open this URL in your browser (replace `TOKEN` with your actual token):
+   ```
+   https://api.telegram.org/botTOKEN/getUpdates
+   ```
+3. Find `"chat": {"id": 123456789}` in the response — that number is your **chat_id**
 
-Replace `your-secret-key-here` with any strong password you choose. Write it down — you'll enter it in the app Settings later.
+### 4c. Configure in FinTrack Settings
 
-### 4c. Connect WhatsApp
-
-1. Open [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
-2. Click **Start Session** → WAHA shows a QR code
-3. On your phone: WhatsApp → Linked Devices → Link a Device → scan the QR
-
-Session name defaults to `default`. Keep it as-is unless you change it in Settings.
-
-### 4d. Install Cloudflare Tunnel
-
-```bash
-# Windows — download cloudflared
-winget install Cloudflare.cloudflared
-# OR download .exe from: https://github.com/cloudflare/cloudflared/releases
-```
-
-### 4e. Start the tunnel
-
-```bash
-cloudflared tunnel --url http://localhost:3000
-```
-
-Cloudflare prints a public URL like `https://random-words.trycloudflare.com`. Copy it.
-
-> This URL changes every time you restart cloudflared. For a permanent free URL, create a free [Cloudflare account](https://cloudflare.com) and set up a named tunnel — see [developers.cloudflare.com/cloudflare-one/connections/connect-networks](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks).
-
-### 4f. Register the webhook
-
-WAHA needs to call your Render backend when you send it a WhatsApp message:
-
-```bash
-curl -X PUT http://localhost:3000/api/sessions/default \
-  -H "Content-Type: application/json" \
-  -H "X-Api-Key: your-secret-key-here" \
-  -d '{
-    "webhooks": [{
-      "url": "https://fintrack-api.onrender.com/api/wa/webhook",
-      "events": ["message"]
-    }]
-  }'
-```
-
-### 4g. Configure in FinTrack Settings
-
-1. Open your Vercel app → **Settings** → **WhatsApp Integration**
+1. Open your Vercel app → **Settings → Telegram Integration**
 2. Fill in:
-   - **WAHA URL:** `https://random-words.trycloudflare.com` (your tunnel URL)
-   - **API Key:** the key you chose in 4b
-   - **Your Phone Number:** international format, no `+`, e.g. `447700900000`
-   - **Session ID:** `default`
+   - **Bot Token:** paste from step 4a
+   - **Your Chat ID:** paste from step 4b
 3. Enable **Budget Alerts** and/or **Transaction Bot**
-4. Click **Save**, then **Send Test Message** — you should receive a WhatsApp message
+4. Click **Save Settings**
+
+### 4d. Register the webhook
+
+Still in Settings → Telegram Integration:
+
+1. Confirm the **Render URL** field shows `https://fintrack-api.onrender.com`
+2. Click **Register Webhook**
+3. You should see: `Webhook registered: https://fintrack-api.onrender.com/api/telegram/webhook`
+
+This tells Telegram to forward all bot messages to your Render backend. Do this once — it persists permanently.
+
+### 4e. Test it
+
+1. Click **Send Test** in Settings — you should receive a Telegram message from your bot
+2. Message the bot directly: `coffee 45000` → bot replies with confirmation and logs the transaction
+3. Message: `salary 5000000 income` → logged as income
+
+> **Webhook is permanent.** Unlike WAHA, there's no QR scan, no container to keep running, nothing to maintain. If you redeploy to a new URL, run Register Webhook again.
 
 ---
 
@@ -197,8 +169,7 @@ curl -X PUT http://localhost:3000/api/sessions/default \
 | Render PostgreSQL | Database | Free for 90 days, then $7/mo |
 | Vercel | Frontend hosting | Unlimited for personal projects |
 | Groq | NLP (Llama 3.3 70B) | 6 000 req/day, 30 req/min |
-| WAHA (Docker) | WhatsApp bot | Free, runs on your machine |
-| Cloudflare Tunnel | Expose WAHA publicly | Free |
+| Telegram Bot API | Notifications + transaction bot | Free forever |
 
 > **Database after 90 days:** Render's free PostgreSQL expires. Migrate to [Supabase](https://supabase.com) (free forever, 500MB): create a project, copy the connection string, update `DATABASE_URL` in Render env vars.
 

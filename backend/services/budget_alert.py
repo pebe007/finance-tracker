@@ -1,4 +1,4 @@
-"""Check budget limits after a transaction is saved and send a WA alert if exceeded.
+"""Check budget limits after a transaction is saved and send a Telegram alert if exceeded.
 
 FastAPI's BackgroundTasks can accept async functions directly — no asyncio.run() needed.
 """
@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from database import SessionLocal
 from models import Budget, Category, Transaction
 from services.app_settings_store import load_settings
-from services.whatsapp import WhatsAppService
+from services.telegram import TelegramService
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +24,12 @@ _ALERT_THRESHOLD_PCT = 80.0
 async def check_and_alert(transaction_id: int) -> None:
     """
     Open a fresh DB session, check if the saved transaction pushes any budget
-    over the alert threshold, and send a WhatsApp message if so.
+    over the alert threshold, and send a Telegram message if so.
 
     Called as a FastAPI BackgroundTask (async) — runs after the response is sent.
     """
-    cfg = load_settings().whatsapp
-    if not cfg.enabled or not cfg.budget_alerts or not cfg.phone:
+    cfg = load_settings().telegram
+    if not cfg.enabled or not cfg.budget_alerts or not cfg.chat_id:
         return
 
     db: Session = SessionLocal()
@@ -79,12 +79,12 @@ async def check_and_alert(transaction_id: int) -> None:
         text = (
             f"{header}\n"
             f"{cat_icon} *{cat_name}*\n\n"
-            f"Spent:     Rp {spent:>12,.0f}\n"
-            f"Limit:     Rp {limit:>12,.0f}\n"
-            f"Remaining: Rp {max(limit - spent, 0):>12,.0f}"
+            f"Spent:     {spent:>12,.0f}\n"
+            f"Limit:     {limit:>12,.0f}\n"
+            f"Remaining: {max(limit - spent, 0):>12,.0f}"
         )
 
-        svc = WhatsAppService(cfg.openwa_url, cfg.api_key, cfg.session_id, cfg.phone)
+        svc = TelegramService()
         await svc.send_message(text)
         logger.info("Budget alert sent for category_id=%s (%.1f%%)", tx.category_id, pct)
 

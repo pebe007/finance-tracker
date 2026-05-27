@@ -1,4 +1,4 @@
-"""Build and send the WhatsApp monthly digest.
+"""Build and send the Telegram monthly digest.
 
 Async — pass directly to FastAPI BackgroundTasks; no asyncio.run() needed.
 """
@@ -12,7 +12,7 @@ from sqlalchemy import func
 from database import SessionLocal
 from models import Category, Transaction
 from services.app_settings_store import load_settings
-from services.whatsapp import WhatsAppService
+from services.telegram import TelegramService
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +24,12 @@ _MONTHS = [
 
 async def send_monthly_digest(month: int | None = None, year: int | None = None) -> None:
     """
-    Fetch the current (or specified) month's summary and push it to WhatsApp.
+    Fetch the current (or specified) month's summary and push it to Telegram.
     Called as a FastAPI BackgroundTask (async).
     """
-    cfg = load_settings().whatsapp
-    if not cfg.enabled or not cfg.phone:
-        logger.debug("WhatsApp not configured — skipping digest")
+    cfg = load_settings().telegram
+    if not cfg.enabled or not cfg.chat_id:
+        logger.debug("Telegram not configured — skipping digest")
         return
 
     db = SessionLocal()
@@ -77,20 +77,20 @@ async def send_monthly_digest(month: int | None = None, year: int | None = None)
         lines = [
             f"📊 *FinTrack Digest — {_MONTHS[m - 1]} {y}*",
             "",
-            f"💹 Income:   Rp {income:>12,.0f}",
-            f"💸 Expense:  Rp {expense:>12,.0f}",
-            f"{'💰' if net >= 0 else '⚠️'} Net:      Rp {net:>12,.0f}",
+            f"💹 Income:   {income:>14,.0f}",
+            f"💸 Expense:  {expense:>14,.0f}",
+            f"{'💰' if net >= 0 else '⚠️'} Net:      {net:>14,.0f}",
         ]
 
         if cat_rows:
             lines += ["", "📌 *Top Expenses:*"]
             for row in cat_rows:
                 icon = (row.icon or "•") + " " if row.icon else ""
-                lines.append(f"   {icon}{row.cat}: Rp {float(row.total):,.0f}")
+                lines.append(f"   {icon}{row.cat}: {float(row.total):,.0f}")
 
         lines += ["", "_Sent by FinTrack_"]
 
-        svc = WhatsAppService(cfg.openwa_url, cfg.api_key, cfg.session_id, cfg.phone)
+        svc = TelegramService()
         await svc.send_message("\n".join(lines))
         logger.info("Digest sent for %s-%s", y, m)
 
