@@ -21,8 +21,14 @@ export default function App() {
             <PrivateRoute>
               <div className="flex min-h-screen">
                 <Navbar />
-                {/* ml-64 matches the sidebar width (w-64 = 256px) */}
-                <main className="flex-1 ml-64 p-6 min-w-0">
+                {/*
+                  Desktop: ml-64 (sidebar width) + standard padding
+                  Mobile:  no left margin, top padding for header bar, bottom padding for tab bar
+                */}
+                <main className="flex-1 min-w-0
+                  md:ml-64 md:p-6
+                  ml-0 pt-16 pb-20 px-3"
+                >
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/transactions" element={<Transactions />} />

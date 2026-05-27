@@ -15,6 +15,7 @@ import datetime as dt
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -23,6 +24,23 @@ from services.app_settings_store import load_settings
 from services.budget_alert import check_and_alert
 from services.nlp import parse_transaction
 from services.telegram import TelegramService
+
+
+def _get_or_create_category(db: Session, name: str, tx_type: str) -> int:
+    """Return existing category ID or create a new one matching the transaction type."""
+    # Normalise name: title-case, max 40 chars
+    name = name.strip().title()[:40] or "Other"
+    cat = db.query(Category).filter(
+        func.lower(Category.name) == name.lower(),
+        Category.type == tx_type,
+    ).first()
+    if cat:
+        return cat.id
+    cat = Category(name=name, type=tx_type, icon="📌", color="#6366f1")
+    db.add(cat)
+    db.commit()
+    db.refresh(cat)
+    return cat.id
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +113,12 @@ async def telegram_webhook(
         )
         return {"ok": False, "reason": "could not parse"}
 
+    # Resolve category — use NLP match or auto-create from description
+    category_id = parsed.get("category_id")
+    if not category_id:
+        cat_name = parsed.get("description") or parsed["type"]
+        category_id = _get_or_create_category(db, cat_name, parsed["type"])
+
     # Create the transaction
     raw_date = parsed.get("date")
     tx_date = dt.date.fromisoformat(raw_date) if raw_date else dt.date.today()
@@ -102,7 +126,7 @@ async def telegram_webhook(
         amount=parsed["amount"],
         type=parsed["type"],
         description=parsed.get("description"),
-        category_id=parsed.get("category_id"),
+        category_id=category_id,
         date=tx_date,
     )
     db.add(tx)

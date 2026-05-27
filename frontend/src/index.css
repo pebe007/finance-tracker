@@ -161,3 +161,40 @@ label.field-label {
 }
 input:checked + .toggle-slider { background: #6366f1; }
 input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+/* ─── Responsive grid helpers ─── */
+/* 2-column on desktop, 1-column on mobile */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 640px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+
+/* 4-column KPI row → 2 on mobile */
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+@media (max-width: 768px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 400px) {
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+}
+
+/* Data table: allow horizontal scroll on mobile */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Reduce card padding on mobile */
+@media (max-width: 640px) {
+  .card { padding: 12px; }
+  .kpi-card { padding: 12px; }
+  .kpi-value { font-size: 18px; }
+}

@@ -406,7 +406,7 @@ export default function Settings() {
       {/* ── Add category ── */}
       <Section title="Add Category" icon={Plus}>
         <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="grid-2">
             <div>
               <label className="field-label">Name</label>
               <input
@@ -430,7 +430,7 @@ export default function Settings() {
               </select>
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="grid-2">
             <div>
               <label className="field-label">Icon (emoji)</label>
               <input

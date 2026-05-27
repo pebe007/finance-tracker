@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from datetime import date
 
-from sqlalchemy import func
+from sqlalchemy import extract, func
 from sqlalchemy.orm import Session
 
 from database import SessionLocal
@@ -58,8 +58,8 @@ async def check_and_alert(transaction_id: int) -> None:
             .filter(
                 Transaction.category_id == tx.category_id,
                 Transaction.type == "expense",
-                func.strftime("%m", Transaction.date) == f"{m:02d}",
-                func.strftime("%Y", Transaction.date) == str(y),
+                extract("month", Transaction.date) == m,
+                extract("year", Transaction.date) == y,
             )
             .scalar()
         )

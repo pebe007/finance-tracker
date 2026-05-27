@@ -394,7 +394,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── KPI row ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+      <div className="grid-4">
         <KpiCard
           label="Total Income"
           value={formatRupiah(summary.total_income)}
@@ -429,7 +429,7 @@ export default function Dashboard() {
       <TrendChart trend={summary.monthly_trend} />
 
       {/* ── Category + Budget row ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="grid-2">
         <CategoryBreakdown categories={summary.by_category} />
         <BudgetStatus items={summary.budget_status} />
       </div>

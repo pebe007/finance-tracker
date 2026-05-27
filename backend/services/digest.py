@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from datetime import date
 
-from sqlalchemy import func
+from sqlalchemy import extract, func
 
 from database import SessionLocal
 from models import Category, Transaction
@@ -37,15 +37,13 @@ async def send_monthly_digest(month: int | None = None, year: int | None = None)
         now = date.today()
         m = month or now.month
         y = year or now.year
-        month_str = f"{m:02d}"
-        year_str = str(y)
 
-        # ── Income / expense totals ──
+        # extract() works on both SQLite and PostgreSQL (unlike strftime)
         rows = (
             db.query(Transaction.type, func.sum(Transaction.amount).label("total"))
             .filter(
-                func.strftime("%m", Transaction.date) == month_str,
-                func.strftime("%Y", Transaction.date) == year_str,
+                extract("month", Transaction.date) == m,
+                extract("year", Transaction.date) == y,
             )
             .group_by(Transaction.type)
             .all()
@@ -65,8 +63,8 @@ async def send_monthly_digest(month: int | None = None, year: int | None = None)
             .join(Category, Transaction.category_id == Category.id)
             .filter(
                 Transaction.type == "expense",
-                func.strftime("%m", Transaction.date) == month_str,
-                func.strftime("%Y", Transaction.date) == year_str,
+                extract("month", Transaction.date) == m,
+                extract("year", Transaction.date) == y,
             )
             .group_by(Category.name, Category.icon)
             .order_by(func.sum(Transaction.amount).desc())

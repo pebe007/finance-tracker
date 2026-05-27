@@ -411,7 +411,7 @@ export default function Transactions() {
           <p style={{ color: "#4b5563", fontSize: 13 }}>No transactions found</p>
         </div>
       ) : (
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="card table-scroll" style={{ padding: 0 }}>
           <table className="data-table">
             <thead>
               <tr>
