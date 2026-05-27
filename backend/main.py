@@ -15,8 +15,8 @@ app = FastAPI(title="Finance Tracker API", version="1.0.0")
 # CORS — allow the React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://localhost:5173"],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
